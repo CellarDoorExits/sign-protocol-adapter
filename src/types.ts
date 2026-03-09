@@ -5,8 +5,8 @@ import type { Hex } from 'viem';
 // EXIT Marker Types
 // ═══════════════════════════════════════════
 
-export type ExitType = 'voluntary' | 'involuntary' | 'emergency';
-export type ExitStatus = 'good_standing' | 'suspended' | 'terminated' | 'disputed';
+export type ExitType = 'voluntary' | 'forced' | 'emergency' | 'keyCompromise' | 'platform_shutdown' | 'directed' | 'constructive' | 'acquisition';
+export type ExitStatus = 'good_standing' | 'disputed' | 'unverified';
 
 export interface ExitMarkerLike {
   id: string;

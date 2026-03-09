@@ -2,7 +2,7 @@
 
 > Anchor EXIT departure markers as privacy-minimal on-chain attestations via [Sign Protocol](https://sign.global).
 
-⚠️ **Pre-release software.** No formal security audit has been performed. Use at your own risk.
+⚠️ **Pre-release software.** No formal security audit has been performed. Use at your own risk. Report vulnerabilities to hawthornhollows@gmail.com.
 
 ## What This Does
 
@@ -140,6 +140,24 @@ See [SECURITY.md](./SECURITY.md) for full details.
 - **Third-party indexing.** `queryDepartures()` uses EthSign's centralized indexing service. For privacy-critical deployments, scan on-chain events directly.
 - **Revocation ≠ erasure.** Revoking an attestation marks it but does not delete on-chain data.
 - **Arweave (off-chain mode).** Permanent, unjurisdictional storage. Data cannot be erased under any circumstances, including GDPR Art. 17 requests.
+
+## Ecosystem
+
+| Package | Language | Description |
+|---------|----------|-------------|
+| [cellar-door-exit](https://github.com/CellarDoorExits/exit-door) | TypeScript | Core protocol (reference impl) |
+| [cellar-door-exit](https://github.com/CellarDoorExits/exit-python) | Python | Core protocol |
+| [cellar-door-entry](https://github.com/CellarDoorExits/entry-door) | TypeScript | Arrival/entry markers |
+| [@cellar-door/langchain](https://github.com/CellarDoorExits/langchain) | TypeScript | LangChain integration |
+| [cellar-door-langchain](https://github.com/CellarDoorExits/cellar-door-langchain-python) | Python | LangChain integration |
+| [@cellar-door/vercel-ai-sdk](https://github.com/CellarDoorExits/vercel-ai-sdk) | TypeScript | Vercel AI SDK |
+| [@cellar-door/mcp-server](https://github.com/CellarDoorExits/mcp-server) | TypeScript | MCP server |
+| [@cellar-door/eliza](https://github.com/CellarDoorExits/eliza-exit) | TypeScript | ElizaOS plugin |
+| [@cellar-door/eas](https://github.com/CellarDoorExits/eas-adapter) | TypeScript | EAS attestation anchoring |
+| [@cellar-door/erc-8004](https://github.com/CellarDoorExits/erc-8004-adapter) | TypeScript | ERC-8004 identity/reputation |
+| **[@cellar-door/sign-protocol](https://github.com/CellarDoorExits/sign-protocol-adapter)** | **TypeScript** | **Sign Protocol attestation ← you are here** |
+
+**[Paper](https://cellar-door.dev/paper/) · [Website](https://cellar-door.dev)**
 
 ## License
 

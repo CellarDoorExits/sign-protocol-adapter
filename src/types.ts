@@ -72,6 +72,10 @@ export interface QueryOptions {
   indexingValue: string;
   /** Page number (default: 1) */
   page?: number;
+  /** Custom indexing endpoint URL (default: Sign Protocol testnet) */
+  endpoint?: string;
+  /** Fetch timeout in milliseconds (default: 10000) */
+  timeoutMs?: number;
 }
 
 /**

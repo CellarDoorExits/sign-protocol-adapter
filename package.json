@@ -24,7 +24,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@ethsign/sp-sdk": "latest"
+    "@ethsign/sp-sdk": "^1.2.7"
   },
   "peerDependencies": {
     "viem": "^2.0.0",

@@ -1,6 +1,15 @@
 import type { SignProtocolClient } from '@ethsign/sp-sdk';
 import type { QueryOptions, DepartureAttestation } from './types.js';
 
+/** Default Sign Protocol indexing endpoints by network. */
+export const INDEXING_ENDPOINTS = {
+  testnet: 'https://testnet-rpc.sign.global/api/index/attestations',
+  mainnet: 'https://mainnet-rpc.sign.global/api/index/attestations',
+} as const;
+
+/** Default fetch timeout (10 seconds). */
+const DEFAULT_TIMEOUT_MS = 10_000;
+
 /**
  * Query EXIT departure attestations via Sign Protocol's indexing service.
  *
@@ -11,7 +20,7 @@ import type { QueryOptions, DepartureAttestation } from './types.js';
  * attestations created by untrusted parties. Always verify the attester
  * address against known operator registries.
  *
- * ⚠️ **Third-party indexing:** This endpoint is operated by EthSign.
+ * ⚠️ **Third-party indexing:** This endpoint is operated by EthSign (Singapore).
  * For privacy-critical deployments, scan on-chain events directly instead
  * of relying on the centralized indexing service.
  */
@@ -19,17 +28,46 @@ export async function queryDepartures(
   _client: SignProtocolClient,
   options: QueryOptions,
 ): Promise<DepartureAttestation[]> {
-  const { schemaId, indexingValue, page = 1 } = options;
+  const {
+    schemaId,
+    indexingValue,
+    page = 1,
+    endpoint = INDEXING_ENDPOINTS.testnet,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  } = options;
 
-  // Sign Protocol indexing service endpoint
-  const url = new URL('https://testnet-rpc.sign.global/api/index/attestations');
+  const url = new URL(endpoint);
   url.searchParams.set('schemaId', schemaId);
   url.searchParams.set('indexingValue', indexingValue);
   url.searchParams.set('page', String(page));
 
-  const res = await fetch(url.toString());
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { signal: controller.signal });
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new SignProtocolQueryError(
+        `Sign Protocol query timed out after ${timeoutMs}ms`,
+        'TIMEOUT',
+      );
+    }
+    throw new SignProtocolQueryError(
+      `Sign Protocol query failed: ${err instanceof Error ? err.message : String(err)}`,
+      'NETWORK',
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+
   if (!res.ok) {
-    throw new Error(`Sign Protocol indexing query failed: ${res.status} ${res.statusText}`);
+    throw new SignProtocolQueryError(
+      `Sign Protocol indexing query failed: ${res.status} ${res.statusText}`,
+      'HTTP_ERROR',
+      res.status,
+    );
   }
 
   const json = (await res.json()) as {
@@ -49,4 +87,23 @@ export async function queryDepartures(
       attester: row.attester ? String(row.attester) : undefined,
     };
   });
+}
+
+/**
+ * Structured error for Sign Protocol query failures.
+ */
+export class SignProtocolQueryError extends Error {
+  readonly code: 'TIMEOUT' | 'NETWORK' | 'HTTP_ERROR';
+  readonly statusCode?: number;
+
+  constructor(
+    message: string,
+    code: 'TIMEOUT' | 'NETWORK' | 'HTTP_ERROR',
+    statusCode?: number,
+  ) {
+    super(message);
+    this.name = 'SignProtocolQueryError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
 }

@@ -1,0 +1,59 @@
+{
+  "name": "@cellar-door/sign-protocol",
+  "version": "0.1.0",
+  "description": "Sign Protocol adapter for EXIT Protocol — anchor departure markers as on-chain attestations via Sign Protocol",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@ethsign/sp-sdk": "latest"
+  },
+  "peerDependencies": {
+    "viem": "^2.0.0",
+    "cellar-door-exit": ">=0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "cellar-door-exit": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "viem": "^2.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0",
+    "cellar-door-exit": "^0.2.0"
+  },
+  "keywords": [
+    "exit-protocol",
+    "sign-protocol",
+    "attestation",
+    "ai-agents",
+    "departure-records",
+    "cellar-door"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cellar-Door-Tech/sign-protocol-adapter"
+  },
+  "author": "Cellar Door (https://cellar-door.dev)"
+}

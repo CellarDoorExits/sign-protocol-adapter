@@ -1,6 +1,6 @@
 export { createExitClient } from './client.js';
 export { registerDepartureSchema, EXIT_DEPARTURE_SCHEMA } from './schema.js';
-export { attestDeparture, computeMarkerHash } from './attest.js';
+export { attestDeparture, computeMarkerHash, blindIndexingValue } from './attest.js';
 export { queryDepartures } from './query.js';
 export { revokeDeparture } from './revoke.js';
 export type {

@@ -2,14 +2,18 @@ import type { SignProtocolClient } from '@ethsign/sp-sdk';
 import type { QueryOptions, DepartureAttestation } from './types.js';
 
 /**
- * Query EXIT departure attestations for an agent via Sign Protocol's indexing service.
+ * Query EXIT departure attestations via Sign Protocol's indexing service.
  *
- * Uses the indexingValue (agent DID) to find all departure records
- * associated with a specific agent.
+ * Uses a blinded indexing value (from blindIndexingValue()) to find departure
+ * records without exposing the raw agent DID in the query.
  *
  * ⚠️ **Permissionless attestation risk:** Query results may include
  * attestations created by untrusted parties. Always verify the attester
  * address against known operator registries.
+ *
+ * ⚠️ **Third-party indexing:** This endpoint is operated by EthSign.
+ * For privacy-critical deployments, scan on-chain events directly instead
+ * of relying on the centralized indexing service.
  */
 export async function queryDepartures(
   _client: SignProtocolClient,
@@ -38,14 +42,11 @@ export async function queryDepartures(
     const data = (row.data ?? {}) as Record<string, unknown>;
     return {
       attestationId: String(row.id ?? row.attestationId ?? ''),
-      exitId: String(data.exitId ?? ''),
-      subject: String(data.subject ?? ''),
-      origin: String(data.origin ?? ''),
-      exitType: String(data.exitType ?? ''),
-      timestamp: BigInt(String(data.timestamp ?? '0')),
       markerHash: (data.markerHash ?? '0x') as `0x${string}`,
+      timestamp: BigInt(String(data.timestamp ?? '0')),
       vcUri: String(data.vcUri ?? ''),
       revoked: Boolean(row.revoked ?? false),
+      attester: row.attester ? String(row.attester) : undefined,
     };
   });
 }

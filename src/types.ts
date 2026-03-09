@@ -38,7 +38,11 @@ export interface ExitClientOptions {
 export interface AttestOptions {
   /** Schema ID from registerDepartureSchema() */
   schemaId: string;
-  /** Agent DID — used as indexingValue for per-agent queries */
+  /**
+   * Indexing value for Sign Protocol queries.
+   * Use blindIndexingValue() to derive a privacy-preserving index
+   * instead of passing the raw agent DID.
+   */
   indexingValue: string;
   /** Optional URI to the Verifiable Credential */
   vcUri?: string;
@@ -60,22 +64,28 @@ export interface AttestResult {
 export interface QueryOptions {
   /** Schema ID to filter by */
   schemaId: string;
-  /** Agent DID to query departures for */
+  /**
+   * Blinded indexing value (from blindIndexingValue()).
+   * Raw agent DIDs should NOT be used here — they expose departure history.
+   */
   indexingValue: string;
   /** Page number (default: 1) */
   page?: number;
 }
 
+/**
+ * Privacy-minimal departure attestation as returned from on-chain queries.
+ * Personal data (agent DID, origin, exitType) is NOT stored on-chain —
+ * retrieve it from the vcUri if access-controlled.
+ */
 export interface DepartureAttestation {
   attestationId: string;
-  exitId: string;
-  subject: string;
-  origin: string;
-  exitType: string;
-  timestamp: bigint;
   markerHash: `0x${string}`;
+  timestamp: bigint;
   vcUri: string;
   revoked: boolean;
+  /** Attester address (for trust verification) */
+  attester?: string;
 }
 
 // ═══════════════════════════════════════════

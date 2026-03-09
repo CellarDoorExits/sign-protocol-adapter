@@ -9,7 +9,7 @@ describe('queryDepartures', () => {
     mockFetch.mockReset();
   });
 
-  it('queries the indexing service and parses results', async () => {
+  it('queries the indexing service and parses minimal results', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: () =>
@@ -19,13 +19,10 @@ describe('queryDepartures', () => {
               {
                 id: '0xabc',
                 revoked: false,
+                attester: '0x1234567890abcdef1234567890abcdef12345678',
                 data: {
-                  exitId: 'urn:exit:test:1',
-                  subject: 'did:key:z6MkTest',
-                  origin: 'did:web:example.com',
-                  exitType: 'voluntary',
-                  timestamp: '1700000000',
                   markerHash: '0x' + 'ff'.repeat(32),
+                  timestamp: '1700000000',
                   vcUri: 'https://example.com/vc/1',
                 },
               },
@@ -36,17 +33,24 @@ describe('queryDepartures', () => {
 
     const results = await queryDepartures({} as any, {
       schemaId: '0x3e',
-      indexingValue: 'did:key:z6MkTest',
+      indexingValue: '0xblindedindex',
     });
 
     expect(results).toHaveLength(1);
     expect(results[0].attestationId).toBe('0xabc');
-    expect(results[0].exitId).toBe('urn:exit:test:1');
+    expect(results[0].markerHash).toBe('0x' + 'ff'.repeat(32));
+    expect(results[0].vcUri).toBe('https://example.com/vc/1');
     expect(results[0].revoked).toBe(false);
+    expect(results[0].attester).toBe('0x1234567890abcdef1234567890abcdef12345678');
+
+    // No personal data fields
+    expect((results[0] as any).exitId).toBeUndefined();
+    expect((results[0] as any).subject).toBeUndefined();
+    expect((results[0] as any).origin).toBeUndefined();
 
     const url = new URL(mockFetch.mock.calls[0][0]);
     expect(url.searchParams.get('schemaId')).toBe('0x3e');
-    expect(url.searchParams.get('indexingValue')).toBe('did:key:z6MkTest');
+    expect(url.searchParams.get('indexingValue')).toBe('0xblindedindex');
   });
 
   it('throws on non-OK response', async () => {
@@ -59,7 +63,7 @@ describe('queryDepartures', () => {
     await expect(
       queryDepartures({} as any, {
         schemaId: '0x3e',
-        indexingValue: 'did:key:z6MkTest',
+        indexingValue: '0xblinded',
       }),
     ).rejects.toThrow('Sign Protocol indexing query failed');
   });
@@ -72,7 +76,7 @@ describe('queryDepartures', () => {
 
     const results = await queryDepartures({} as any, {
       schemaId: '0x3e',
-      indexingValue: 'did:key:z6MkTest',
+      indexingValue: '0xblinded',
     });
 
     expect(results).toEqual([]);

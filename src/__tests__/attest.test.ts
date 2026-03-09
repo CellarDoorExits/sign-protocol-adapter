@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { computeMarkerHash, attestDeparture } from '../attest.js';
+import { computeMarkerHash, attestDeparture, blindIndexingValue } from '../attest.js';
 import type { ExitMarkerLike } from '../types.js';
 
 const MOCK_MARKER: ExitMarkerLike = {
@@ -39,15 +39,42 @@ describe('computeMarkerHash', () => {
   });
 });
 
+describe('blindIndexingValue', () => {
+  it('returns a keccak256 hash', () => {
+    const result = blindIndexingValue('did:key:z6MkTest');
+    expect(result).toMatch(/^0x[a-f0-9]{64}$/);
+  });
+
+  it('is deterministic', () => {
+    const a = blindIndexingValue('did:key:z6MkTest', 'secret');
+    const b = blindIndexingValue('did:key:z6MkTest', 'secret');
+    expect(a).toBe(b);
+  });
+
+  it('differs with different secrets', () => {
+    const a = blindIndexingValue('did:key:z6MkTest', 'secret1');
+    const b = blindIndexingValue('did:key:z6MkTest', 'secret2');
+    expect(a).not.toBe(b);
+  });
+
+  it('differs from no-secret version', () => {
+    const a = blindIndexingValue('did:key:z6MkTest');
+    const b = blindIndexingValue('did:key:z6MkTest', 'secret');
+    expect(a).not.toBe(b);
+  });
+});
+
 describe('attestDeparture', () => {
-  it('creates an attestation with correct parameters', async () => {
+  it('creates a privacy-minimal attestation (3 fields only)', async () => {
     const mockClient = {
       createAttestation: vi.fn().mockResolvedValue({ attestationId: '0x99' }),
     } as any;
 
+    const blindedIndex = blindIndexingValue('did:key:z6MkTest', 'deployer-secret');
+
     const result = await attestDeparture(mockClient, MOCK_MARKER, {
       schemaId: '0x3e',
-      indexingValue: 'did:key:z6MkTest',
+      indexingValue: blindedIndex,
       vcUri: 'https://example.com/vc/123',
       salt: '0x' + 'dd'.repeat(32),
     });
@@ -55,13 +82,21 @@ describe('attestDeparture', () => {
     expect(result.attestationId).toBe('0x99');
     expect(result.markerHash).toMatch(/^0x[a-f0-9]{64}$/);
     expect(result.salt).toBe('0x' + 'dd'.repeat(32));
-    expect(result.indexingValue).toBe('did:key:z6MkTest');
+    expect(result.indexingValue).toBe(blindedIndex);
 
     const call = mockClient.createAttestation.mock.calls[0][0];
     expect(call.schemaId).toBe('0x3e');
-    expect(call.indexingValue).toBe('did:key:z6MkTest');
-    expect(call.data.exitId).toBe('urn:exit:test:abc123');
-    expect(call.data.subject).toBe('did:key:z6MkTest');
+    expect(call.indexingValue).toBe(blindedIndex);
+
+    // Privacy-minimal: only 3 fields on-chain
+    expect(call.data.markerHash).toMatch(/^0x[a-f0-9]{64}$/);
+    expect(call.data.timestamp).toBe(BigInt(1700000000));
     expect(call.data.vcUri).toBe('https://example.com/vc/123');
+
+    // No personal data on-chain
+    expect(call.data.exitId).toBeUndefined();
+    expect(call.data.subject).toBeUndefined();
+    expect(call.data.origin).toBeUndefined();
+    expect(call.data.exitType).toBeUndefined();
   });
 });

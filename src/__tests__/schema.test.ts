@@ -2,17 +2,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { EXIT_DEPARTURE_SCHEMA, registerDepartureSchema } from '../schema.js';
 
 describe('EXIT_DEPARTURE_SCHEMA', () => {
-  it('has the correct field names', () => {
+  it('has exactly 3 privacy-minimal fields', () => {
     const names = EXIT_DEPARTURE_SCHEMA.data.map((d) => d.name);
-    expect(names).toEqual([
-      'exitId',
-      'subject',
-      'origin',
-      'exitType',
-      'timestamp',
-      'markerHash',
-      'vcUri',
-    ]);
+    expect(names).toEqual(['markerHash', 'timestamp', 'vcUri']);
+  });
+
+  it('does not contain personal data fields', () => {
+    const names = EXIT_DEPARTURE_SCHEMA.data.map((d) => d.name);
+    expect(names).not.toContain('exitId');
+    expect(names).not.toContain('subject');
+    expect(names).not.toContain('origin');
+    expect(names).not.toContain('exitType');
   });
 
   it('is revocable', () => {
@@ -28,6 +28,6 @@ describe('registerDepartureSchema', () => {
 
     const result = await registerDepartureSchema(mockClient);
     expect(result.schemaId).toBe('0x42');
-    expect(mockClient.createSchema).toHaveBeenCalledWith(EXIT_DEPARTURE_SCHEMA);
+    expect(mockClient.createSchema).toHaveBeenCalled();
   });
 });

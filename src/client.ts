@@ -25,7 +25,7 @@ export function createExitClient(options: ExitClientOptions): SignProtocolClient
   if (mode === SpMode.OffChain) {
     return new SignProtocolClient(SpMode.OffChain, {
       account,
-    } as any);
+    } as unknown as ConstructorParameters<typeof SignProtocolClient>[1]);
   }
 
   return new SignProtocolClient(SpMode.OnChain, {

@@ -3,26 +3,23 @@ import type { SignProtocolClient } from '@ethsign/sp-sdk';
 /**
  * EXIT Protocol departure schema for Sign Protocol.
  *
+ * Privacy-minimal design: only the commitment hash, timestamp, and a URI
+ * to the full Verifiable Credential are stored on-chain/Arweave. All personal
+ * data (agent DID, origin, exitType) lives behind the vcUri where it can be
+ * access-controlled, encrypted, or deleted (GDPR Art. 17).
+ *
  * Fields:
- * - exitId:      Unique departure identifier (urn:exit:...)
- * - subject:     Agent DID (did:key, did:ethr, did:pkh)
- * - origin:      Platform DID (did:web, etc.)
- * - exitType:    voluntary | involuntary | emergency
- * - timestamp:   Unix timestamp (seconds)
  * - markerHash:  keccak256 commitment hash (includes mandatory salt)
+ * - timestamp:   Unix timestamp (seconds)
  * - vcUri:       URI to the full Verifiable Credential
  */
 export const EXIT_DEPARTURE_SCHEMA = {
-  name: 'EXIT Protocol Departure Record',
+  name: 'EXIT Departure Anchor',
   description:
-    'Cryptographic departure record for AI agents per the EXIT Protocol (cellar-door.dev)',
+    'Privacy-minimal departure anchor for AI agents per the EXIT Protocol (cellar-door.dev). Full marker data lives at vcUri.',
   data: [
-    { name: 'exitId', type: 'string' },
-    { name: 'subject', type: 'string' },
-    { name: 'origin', type: 'string' },
-    { name: 'exitType', type: 'string' },
-    { name: 'timestamp', type: 'uint256' },
     { name: 'markerHash', type: 'bytes32' },
+    { name: 'timestamp', type: 'uint256' },
     { name: 'vcUri', type: 'string' },
   ],
   revocable: true,
@@ -36,6 +33,9 @@ export const EXIT_DEPARTURE_SCHEMA = {
 export async function registerDepartureSchema(
   client: SignProtocolClient,
 ): Promise<{ schemaId: string }> {
-  const result = await client.createSchema(EXIT_DEPARTURE_SCHEMA as any);
+  // sp-sdk types may lag behind viem — narrow cast is safer than `as any`
+  const result = await client.createSchema(
+    EXIT_DEPARTURE_SCHEMA as unknown as Parameters<typeof client.createSchema>[0],
+  );
   return { schemaId: result.schemaId };
 }

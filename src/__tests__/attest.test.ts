@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { computeMarkerHash, attestDeparture, blindIndexingValue } from '../attest.js';
+import { computeMarkerHash, attestDeparture, blindIndexingValue, verifyMarkerHash } from '../attest.js';
 import type { ExitMarkerLike } from '../types.js';
 
 const MOCK_MARKER: ExitMarkerLike = {
@@ -41,7 +41,7 @@ describe('computeMarkerHash', () => {
 
 describe('blindIndexingValue', () => {
   it('returns a keccak256 hash', () => {
-    const result = blindIndexingValue('did:key:z6MkTest');
+    const result = blindIndexingValue('did:key:z6MkTest', 'secret');
     expect(result).toMatch(/^0x[a-f0-9]{64}$/);
   });
 
@@ -57,10 +57,30 @@ describe('blindIndexingValue', () => {
     expect(a).not.toBe(b);
   });
 
-  it('differs from no-secret version', () => {
-    const a = blindIndexingValue('did:key:z6MkTest');
-    const b = blindIndexingValue('did:key:z6MkTest', 'secret');
+  it('differs with different DIDs', () => {
+    const a = blindIndexingValue('did:key:z6MkTest1', 'secret');
+    const b = blindIndexingValue('did:key:z6MkTest2', 'secret');
     expect(a).not.toBe(b);
+  });
+});
+
+describe('verifyMarkerHash', () => {
+  it('returns true for matching hash+salt', () => {
+    const salt = '0x' + 'ab'.repeat(32);
+    const { hash } = computeMarkerHash(MOCK_MARKER, salt);
+    expect(verifyMarkerHash(MOCK_MARKER, hash, salt)).toBe(true);
+  });
+
+  it('returns false for wrong salt', () => {
+    const { hash } = computeMarkerHash(MOCK_MARKER, '0x' + 'ab'.repeat(32));
+    expect(verifyMarkerHash(MOCK_MARKER, hash, '0x' + 'cd'.repeat(32))).toBe(false);
+  });
+
+  it('returns false for modified marker', () => {
+    const salt = '0x' + 'ab'.repeat(32);
+    const { hash } = computeMarkerHash(MOCK_MARKER, salt);
+    const modified = { ...MOCK_MARKER, exitType: 'involuntary' as const };
+    expect(verifyMarkerHash(modified, hash, salt)).toBe(false);
   });
 });
 

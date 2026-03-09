@@ -1,4 +1,5 @@
 import type { EvmChains, SpMode } from '@ethsign/sp-sdk';
+import type { Hex } from 'viem';
 
 // ═══════════════════════════════════════════
 // EXIT Marker Types
@@ -52,9 +53,9 @@ export interface AttestOptions {
 
 export interface AttestResult {
   attestationId: string;
-  markerHash: `0x${string}`;
-  salt: string;
-  indexingValue: string;
+  markerHash: Hex;
+  salt: Hex;
+  indexingValue: Hex;
 }
 
 // ═══════════════════════════════════════════
@@ -80,7 +81,7 @@ export interface QueryOptions {
  */
 export interface DepartureAttestation {
   attestationId: string;
-  markerHash: `0x${string}`;
+  markerHash: Hex;
   timestamp: bigint;
   vcUri: string;
   revoked: boolean;
@@ -106,6 +107,6 @@ export interface RevokeResult {
 // ═══════════════════════════════════════════
 
 export interface MarkerHashResult {
-  hash: `0x${string}`;
-  salt: string;
+  hash: Hex;
+  salt: Hex;
 }

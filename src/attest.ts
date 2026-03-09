@@ -1,5 +1,6 @@
 import type { SignProtocolClient } from '@ethsign/sp-sdk';
-import { keccak256, encodeAbiParameters, toHex } from 'viem';
+import { randomBytes } from 'node:crypto';
+import { keccak256, encodeAbiParameters, toHex, type Hex } from 'viem';
 import type {
   ExitMarkerLike,
   AttestOptions,
@@ -8,20 +9,16 @@ import type {
 } from './types.js';
 
 const DOMAIN_SEPARATOR = 'EXIT_PROTOCOL_SIGN_DEPARTURE_v1';
+const BLIND_INDEX_DOMAIN = 'EXIT_BLIND_INDEX_v1';
 
 /**
  * Generate a cryptographically random 256-bit salt.
- * Works in Node 18+ (via globalThis.crypto) and browsers.
  */
-function randomSalt(): string {
-  // Node 18 polyfill check — globalThis.crypto.getRandomValues is available
-  // from Node 19+. For Node 18, fall back to node:crypto.
+function randomSalt(): Hex {
+  // Prefer Web Crypto (browsers + Node 19+), fall back to node:crypto
   if (typeof globalThis.crypto?.getRandomValues === 'function') {
     return toHex(globalThis.crypto.getRandomValues(new Uint8Array(32)));
   }
-  // Dynamic import would be async — instead use require for Node 18 compat
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { randomBytes } = require('node:crypto');
   return toHex(randomBytes(32));
 }
 
@@ -73,23 +70,38 @@ export function computeMarkerHash(
 }
 
 /**
- * Compute a blinded indexing value from an agent DID.
+ * Compute a blinded indexing value from an agent DID and deployer secret.
  *
- * Uses keccak256(agentDID + deployerSecret) so the index is queryable
+ * Uses keccak256(domain + agentDID + secret) so the index is queryable
  * by the deployer but opaque to external observers. Without the secret,
  * an observer cannot enumerate an agent's departure history.
  *
- * If no secret is provided, falls back to keccak256(agentDID) — still
- * better than cleartext but correlatable if the DID is known.
+ * The secret is **required** — without it, the index is brute-forceable
+ * against known DID sets (DIDs are public identifiers).
  */
 export function blindIndexingValue(
   agentDid: string,
-  deployerSecret?: string,
-): string {
-  const input = deployerSecret
-    ? `${agentDid}:${deployerSecret}`
-    : agentDid;
+  deployerSecret: string,
+): Hex {
+  // Domain-separated to prevent cross-protocol collision
+  const input = `${BLIND_INDEX_DOMAIN}:${agentDid}:${deployerSecret}`;
   return keccak256(toHex(input));
+}
+
+/**
+ * Verify a marker hash against a marker and salt.
+ *
+ * Returns true if recomputing the hash with the given salt produces
+ * the expected hash. Use this to confirm an on-chain commitment
+ * corresponds to a specific departure marker.
+ */
+export function verifyMarkerHash(
+  marker: ExitMarkerLike,
+  expectedHash: Hex,
+  salt: string,
+): boolean {
+  const { hash } = computeMarkerHash(marker, salt);
+  return hash === expectedHash;
 }
 
 /**

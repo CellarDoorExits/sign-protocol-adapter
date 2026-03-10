@@ -24,6 +24,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@cellar-door/attestation-core": ">=0.1.0",
     "@ethsign/sp-sdk": "^1.2.7"
   },
   "peerDependencies": {

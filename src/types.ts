@@ -107,6 +107,46 @@ export interface RevokeResult {
 }
 
 // ═══════════════════════════════════════════
+// Arrival Types
+// ═══════════════════════════════════════════
+
+export interface ArrivalMarkerLike {
+  id: string;
+  subject: string;
+  destination: string;
+  timestamp: string | number;
+  departureRef?: string;
+}
+
+export interface ArrivalAttestOptions {
+  /** Schema ID from registerArrivalSchema() */
+  schemaId: string;
+  /** Blinded indexing value */
+  indexingValue: string;
+  /** Attestation ID of the linked departure */
+  departureRef?: string;
+  /** Optional pre-computed salt for arrivalHash */
+  salt?: string;
+}
+
+export interface ArrivalAttestResult {
+  attestationId: string;
+  arrivalHash: Hex;
+  salt: Hex;
+  indexingValue: string;
+  departureRef: string;
+}
+
+export interface ArrivalAttestation {
+  attestationId: string;
+  arrivalHash: Hex;
+  timestamp: bigint;
+  departureRef: string;
+  revoked: boolean;
+  attester?: string;
+}
+
+// ═══════════════════════════════════════════
 // Hash Result
 // ═══════════════════════════════════════════
 

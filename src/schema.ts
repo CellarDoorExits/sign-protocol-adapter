@@ -33,9 +33,45 @@ export const EXIT_DEPARTURE_SCHEMA = {
 export async function registerDepartureSchema(
   client: SignProtocolClient,
 ): Promise<{ schemaId: string }> {
-  // sp-sdk types may lag behind viem — narrow cast is safer than `as any`
   const result = await client.createSchema(
     EXIT_DEPARTURE_SCHEMA as unknown as Parameters<typeof client.createSchema>[0],
+  );
+  return { schemaId: result.schemaId };
+}
+
+/**
+ * EXIT Protocol arrival schema for Sign Protocol.
+ *
+ * Privacy-minimal design matching the departure pattern: only the commitment
+ * hash, timestamp, and a reference to the departure attestation are stored.
+ *
+ * Fields:
+ * - arrivalHash:   keccak256 commitment hash (includes mandatory salt)
+ * - timestamp:     Unix timestamp (seconds)
+ * - departureRef:  Attestation ID of the linked departure record
+ */
+export const EXIT_ARRIVAL_SCHEMA = {
+  name: 'EXIT Arrival Anchor',
+  description:
+    'Privacy-minimal arrival anchor for AI agents per the EXIT Protocol (cellar-door.dev). Links back to a departure attestation.',
+  data: [
+    { name: 'arrivalHash', type: 'bytes32' },
+    { name: 'timestamp', type: 'uint256' },
+    { name: 'departureRef', type: 'string' },
+  ],
+  revocable: true,
+};
+
+/**
+ * Register the EXIT arrival schema on-chain. One-time operation per chain (costs gas).
+ *
+ * @returns The schema ID to use for arrival attestations.
+ */
+export async function registerArrivalSchema(
+  client: SignProtocolClient,
+): Promise<{ schemaId: string }> {
+  const result = await client.createSchema(
+    EXIT_ARRIVAL_SCHEMA as unknown as Parameters<typeof client.createSchema>[0],
   );
   return { schemaId: result.schemaId };
 }

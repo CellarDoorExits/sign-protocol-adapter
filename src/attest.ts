@@ -1,72 +1,35 @@
 import type { SignProtocolClient } from '@ethsign/sp-sdk';
-import { randomBytes } from 'node:crypto';
-import { keccak256, encodeAbiParameters, toHex, type Hex } from 'viem';
+import { keccak256, toHex, type Hex } from 'viem';
+import {
+  computeMarkerHash as coreComputeMarkerHash,
+  computeArrivalHash as coreComputeArrivalHash,
+} from '@cellar-door/attestation-core';
 import type {
   ExitMarkerLike,
   AttestOptions,
   AttestResult,
   MarkerHashResult,
+  ArrivalMarkerLike,
+  ArrivalAttestOptions,
+  ArrivalAttestResult,
 } from './types.js';
 
-const DOMAIN_SEPARATOR = 'EXIT_PROTOCOL_SIGN_DEPARTURE_v1';
 const BLIND_INDEX_DOMAIN = 'EXIT_BLIND_INDEX_v1';
-
-/**
- * Generate a cryptographically random 256-bit salt.
- */
-function randomSalt(): Hex {
-  // Prefer Web Crypto (browsers + Node 19+), fall back to node:crypto
-  if (typeof globalThis.crypto?.getRandomValues === 'function') {
-    return toHex(globalThis.crypto.getRandomValues(new Uint8Array(32)));
-  }
-  return toHex(randomBytes(32));
-}
 
 /**
  * Compute a keccak256 commitment hash of a departure marker with mandatory salt.
  *
- * The salt prevents rainbow-table attacks against known marker fields.
- * If no salt is provided, a cryptographically random 256-bit salt is generated.
+ * Delegates to @cellar-door/attestation-core for cross-adapter consistency.
+ * All adapters (EAS, Sign Protocol, ERC-8004) now produce identical hashes
+ * for the same marker + salt combination.
  *
  * ⚠️ **Store the salt** — you need it to verify the hash later.
- * Treat the salt with the same care as a private key: anyone with the salt
- * can verify what the markerHash commits to.
  */
 export function computeMarkerHash(
   marker: ExitMarkerLike,
   salt?: string,
 ): MarkerHashResult {
-  const actualSalt = salt ?? randomSalt();
-
-  const encoded = encodeAbiParameters(
-    [
-      { type: 'string' },  // domain separator
-      { type: 'string' },  // exitId
-      { type: 'string' },  // subject
-      { type: 'string' },  // origin
-      { type: 'string' },  // exitType
-      { type: 'uint256' }, // timestamp
-      { type: 'bytes32' }, // salt
-    ],
-    [
-      DOMAIN_SEPARATOR,
-      marker.id,
-      marker.subject,
-      marker.origin,
-      marker.exitType,
-      BigInt(
-        typeof marker.timestamp === 'string'
-          ? Math.floor(new Date(marker.timestamp).getTime() / 1000)
-          : marker.timestamp,
-      ),
-      actualSalt as `0x${string}`,
-    ],
-  );
-
-  return {
-    hash: keccak256(encoded),
-    salt: actualSalt,
-  };
+  return coreComputeMarkerHash(marker, salt as Hex | undefined);
 }
 
 /**
@@ -91,18 +54,9 @@ export function blindIndexingValue(
 /**
  * Verify a marker hash against a marker and salt.
  *
- * Returns true if recomputing the hash with the given salt produces
- * the expected hash. Use this to confirm an on-chain commitment
- * corresponds to a specific departure marker.
+ * Delegates to @cellar-door/attestation-core for cross-adapter consistency.
  */
-export function verifyMarkerHash(
-  marker: ExitMarkerLike,
-  expectedHash: Hex,
-  salt: string,
-): boolean {
-  const { hash } = computeMarkerHash(marker, salt);
-  return hash === expectedHash;
-}
+export { verifyMarkerHash } from '@cellar-door/attestation-core';
 
 /**
  * Create an EXIT departure attestation via Sign Protocol.
@@ -143,5 +97,63 @@ export async function attestDeparture(
     markerHash: hash,
     salt: actualSalt,
     indexingValue,
+  };
+}
+
+/**
+ * Compute a keccak256 commitment hash of an arrival marker with mandatory salt.
+ *
+ * Delegates to @cellar-door/attestation-core for cross-adapter consistency.
+ */
+export function computeArrivalHash(
+  marker: ArrivalMarkerLike,
+  salt?: string,
+): MarkerHashResult {
+  return coreComputeArrivalHash(marker, salt as Hex | undefined);
+}
+
+/**
+ * Verify an arrival hash against a marker and salt.
+ *
+ * Delegates to @cellar-door/attestation-core for cross-adapter consistency.
+ */
+export { verifyArrivalHash } from '@cellar-door/attestation-core';
+
+/**
+ * Create an EXIT arrival attestation via Sign Protocol.
+ *
+ * Privacy-minimal: only arrivalHash, timestamp, and departureRef are stored.
+ * Links to the corresponding departure attestation via departureRef.
+ */
+export async function attestArrival(
+  client: SignProtocolClient,
+  marker: ArrivalMarkerLike,
+  options: ArrivalAttestOptions,
+): Promise<ArrivalAttestResult> {
+  const { schemaId, indexingValue, departureRef = marker.departureRef ?? '', salt } = options;
+
+  const { hash, salt: actualSalt } = computeArrivalHash(marker, salt);
+
+  const timestamp =
+    typeof marker.timestamp === 'string'
+      ? BigInt(Math.floor(new Date(marker.timestamp).getTime() / 1000))
+      : BigInt(marker.timestamp);
+
+  const result = await client.createAttestation({
+    schemaId,
+    data: {
+      arrivalHash: hash,
+      timestamp,
+      departureRef,
+    },
+    indexingValue,
+  });
+
+  return {
+    attestationId: result.attestationId,
+    arrivalHash: hash,
+    salt: actualSalt,
+    indexingValue,
+    departureRef,
   };
 }
